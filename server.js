@@ -2,7 +2,16 @@
 var express = require('express'),
     app     = express(),
     morgan  = require('morgan');
-    
+var path = require('path');
+var fs = require('fs');
+var mongodb = require('mongodb');
+var ObjectID = mongodb.ObjectID;
+var crypto = require('crypto');
+var express = require('express');
+var bodyParser = require('body-parser'); 
+var multer = require('multer');
+var upload = multer({dest:'/home/swetha/uploads/'});
+
 Object.assign=require('object-assign')
 
 app.engine('html', require('ejs').renderFile);
@@ -93,7 +102,6 @@ app.get('/', function (req, res) {
     res.render('index.html', { pageCountMessage : null});
   }
 });
-
 app.get('/pagecount', function (req, res) {
   // try to initialize the db on every request if it's not already
   // initialized.
@@ -108,7 +116,89 @@ app.get('/pagecount', function (req, res) {
     res.send('{ pageCount: -1 }');
   }
 });
-
+//nudity detection
+app.post('/checkNude',upload.single('image'),(request,response,next)=>
+{
+console.log(request.file);
+console.log(request.file.path);
+var sightengine = require('sightengine')('450909543', '7VewSL5BPtc54hrVHXmg');
+var client = request.body;
+sightengine.check(['nudity','wad','offensive','scam']).set_file(request.file.path).then(function(result) 
+{
+console.log(result);
+console.log('-------------------------------------------------------------------------------------------------------------');
+var nudity = splitter('nudity',result);
+var weapon = splitter('weapon',result);
+var drugs = splitter('drugs',result);
+var alcohol = splitter('alcohol',result);
+var offence = splitter('offensive',result);
+var offenceprob = splitter('prob',offence);
+var scam = splitter('scam',result);
+var raw = splitter('raw',nudity);
+var safe = splitter('safe',nudity);
+var partial = splitter('partial',nudity);
+console.log(nudity);
+console.log(offenceprob);
+console.log(weapon);
+console.log(scam);
+console.log(drugs);
+console.log(alcohol);
+console.log(raw);
+console.log(safe);
+console.log(partial);
+if(partial > 0.5 || raw > 0.5)
+{
+var res = 'Nudity not allowed !';
+response.send(res);
+}
+else if(offenceprob > 0.5)
+{
+var res = 'Offencive content not allowed !';
+response.send(res);
+}
+else if(weapon > 0.5)
+{
+var res = 'Offencive content not allowed !';
+response.send(res);
+}
+else if(alcohol > 0.5 || drugs > 0.5)
+{
+var res = 'Drugs are not allowed !';
+response.send(res);
+}
+else if(scam > 0.5)
+{
+var res = 'Scam contents not allowed !';
+response.send(res);
+}
+else
+{
+var res = "Image Good";
+response.send(res);
+fs.readdir("/home/swetha/uploads/",(err,files)=>
+{
+if(err)throw err;
+for(file of files)
+{
+fs.unlink(path.join("/home/swetha/uploads/",file),err => 
+{
+if(err) throw err;
+});
+}
+});
+}
+function splitter(checker,jsonobj)
+{
+var string = JSON.stringify(jsonobj);
+var objectValue = JSON.parse(string);
+var result = objectValue[checker];
+return result;
+};
+}).catch(function(err) {
+console.log(err);
+response.send(err);
+});
+});
 // error handling
 app.use(function(err, req, res, next){
   console.error(err.stack);
