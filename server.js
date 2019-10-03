@@ -117,7 +117,7 @@ app.get('/pagecount', function (req, res) {
   }
 });
 //nudity detection
-app.post('/checkNude',upload.single('image'),(request,response,next)=>
+app.get('/checkNude',upload.single('image'),(request,response,next)=>
 {
 console.log(request.file);
 console.log(request.file.path);
